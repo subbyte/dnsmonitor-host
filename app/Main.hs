@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Monitor (monitor)
 
 main :: IO ()
-main = someFunc
+main = monitor
