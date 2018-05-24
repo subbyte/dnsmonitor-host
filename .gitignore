@@ -1,2 +1,5 @@
 # automatic generated files
 dnsmonitor-host.cabal
+
+# compiled files
+.stack-work
