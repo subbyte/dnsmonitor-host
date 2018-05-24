@@ -1,0 +1,48 @@
+name:                dnsmonitor-host
+version:             0.1.0.0
+github:              "subbyte/dnsmonitor-host"
+license:             Apache License 2.0
+author:              "Xiaokui Shu"
+maintainer:          "xiaokui.shu@ibm.com"
+copyright:           "© Xiaokui Shu 2018"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            utility
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/subbyte/dnsmonitor-host#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  dnsmonitor-host-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dnsmonitor-host
+
+tests:
+  dnsmonitor-host-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dnsmonitor-host
