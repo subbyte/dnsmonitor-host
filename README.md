@@ -20,7 +20,7 @@ Summary: monitor outbound DNS queries on a single host and process it in a strea
 
 [Haskell Stack](https://www.haskellstack.org/)
 
-The latest stack is recommended: if installed with `apt-get` or `dnf`, then `stack upgrade` gets the latest stack usually at `~/.local/bin/stack`.
+The latest stack is recommended: if installed with `apt-get` or `dnf`, then stack can be upgraded with `stack upgrade`. The latest stack is usually at `~/.local/bin/stack`.
 
 ### Installation
 
