@@ -11,11 +11,11 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Data.HashMap.Strict as HashMap
 
-import Streamly (runStream)
+import Streamly (runStream, asyncly)
 import Control.Monad (guard, when)
 import Data.Maybe (isJust, isNothing, fromJust)
 import System.IO (Handle, stderr)
-import System.Process (createProcess, proc, std_out, StdStream(..))
+import System.Process (createProcess, proc, std_out, std_err, StdStream(..))
 
 data TRD = TRD
     { timestamp  :: T.Text  
@@ -23,7 +23,12 @@ data TRD = TRD
     , domainname :: T.Text  
     }
 
-data DomainProcState = DomainProcState
+data RecTypeFilterState = RTFS
+    { prevDomain :: T.Text
+    , currTRD :: TRD
+    }
+
+data DomainProcState = DPS
     { tldMap :: DomainHitMap -- top-level domain
     , sldMap :: DomainHitMap -- second-level domain
     , currentTLD :: Maybe T.Text -- Just TLD
@@ -33,21 +38,32 @@ data DomainProcState = DomainProcState
 
 type DomainHitMap = HashMap.HashMap T.Text Integer
 
-emptyDHM = DomainProcState HashMap.empty HashMap.empty Nothing Nothing ""
+emptyDHM = DPS HashMap.empty HashMap.empty Nothing Nothing ""
+emptyRTFS = RTFS "" $ TRD "" "" ""
 
 monitor :: IO ()
 monitor = do
     -- DNS data Producer from tcpdump
-    (_, Just hout, _, _) <- createProcess
+    (_, Just hout, Just herr, _) <- createProcess
         (proc "tcpdump" ["-i", "any", "-l", "-nn", "dst port 53"])
-        { std_out = CreatePipe }
+        { std_out = CreatePipe
+        , std_err = CreatePipe }
     -- streaming DNS data, process it, and print it
-    runStream $ printS $ analyzeS $ rtFilter $ genTRDs $ S.fromHandle hout
+    runStream . asyncly
+        $  (printS . analyzeS . dupF . rtF . genTRDs $ S.fromHandle hout)
+        <> (S.mapM (printErr . T.pack) $ S.fromHandle herr)
   where
+    -- generate TRD from raw tcpdump records
     genTRDs    = filterJust . S.mapM generateTRD
-    rtFilter   = S.filter $ monitoredRecType . domainname
+    -- filter out TRDs based on record types
+    rtF        = S.filter $ monitoredRecType . domainname
+    -- filter out duplicate TRDs which share same domain names
+    dupF       = filterJust . S.scanx updateRTFS emptyRTFS eliminateTRD
+    -- stateful analysis to output line for print
     analyzeS   = filterJust . S.scanx updateHitMap emptyDHM outputLine
+    -- display line
     printS     = S.mapM TIO.putStrLn
+    -- helper function with type (Maybe a) -> a
     filterJust = fmap fromJust . S.filter isJust
 
 generateTRD :: String -> IO (Maybe TRD)
@@ -79,15 +95,22 @@ splitOnSpace = T.split (== ' ')
 splitOnDot :: T.Text -> [T.Text]
 splitOnDot = T.split (== '.')
 
+updateRTFS :: RecTypeFilterState -> TRD -> RecTypeFilterState
+updateRTFS (RTFS _ (TRD _ _ dm)) trd = RTFS dm trd
+
+eliminateTRD :: RecTypeFilterState -> Maybe TRD
+eliminateTRD (RTFS dm' trd@(TRD _ _ dm)) =
+    if dm == dm' then Nothing else Just trd
+
 updateHitMap :: DomainProcState -> TRD -> DomainProcState
-updateHitMap m trd = DomainProcState tldM sldM tld sld dm
+updateHitMap s trd = DPS tldM sldM tld sld dm
   where
     dm   = domainname trd
     dx   = splitOnDot dm
     tld  = Just . last $ init dx
     sld  = if length dx > 2 then Just . last . init $ init dx else Nothing
-    tldM = incrementMap (tldMap m) tld
-    sldM = incrementMap (sldMap m) sld
+    tldM = incrementMap (tldMap s) tld
+    sldM = incrementMap (sldMap s) sld
 
 incrementMap :: DomainHitMap
              -> Maybe T.Text -- domain key if extracted
@@ -97,13 +120,13 @@ incrementMap m (Just k) = HashMap.insertWith (+) k 1 m
 
 outputLine :: DomainProcState -> Maybe T.Text
 -- found SLD
-outputLine (DomainProcState _    sldM _          (Just sld) dm) = Just $
+outputLine (DPS _    sldM _          (Just sld) dm) = Just $
     prepareOutputLine sld (sldM HashMap.! sld) dm
 -- at least found TLD
-outputLine (DomainProcState tldM _    (Just tld) Nothing    dm) = Just $
+outputLine (DPS tldM _    (Just tld) Nothing    dm) = Just $
     prepareOutputLine tld (tldM HashMap.! tld) dm
 -- no TLD (domainname == "."), the upstream should already yield an error
-outputLine (DomainProcState tldM _    Nothing    Nothing    dm) = Nothing
+outputLine (DPS tldM _    Nothing    Nothing    dm) = Nothing
 
 prepareOutputLine :: T.Text -- domain key: TLD or SLD
                   -> Integer -- hit
@@ -116,8 +139,14 @@ prepareOutputLine dk hit dm = T.concat [color co $ padding dk, "| ", dm]
     padding x = T.justifyLeft displayKeySpan ' '
               $ if pos > 0 then T.concat [T.dropEnd (pos + 4) x, "..."] else x
 
+color :: T.Text -- what color to use
+      -> T.Text -- the input
+      -> T.Text -- the output
+color co t = T.concat [colorCode co, t, colorCode "default"]
+
 printErr :: T.Text -> IO ()
-printErr = TIO.hPutStrLn stderr
+printErr msg = TIO.hPutStrLn stderr $ T.concat
+    [if isErrMsg msg then color "red" "[error] " else "[message] ", msg]
 
 printErrInvalidRec :: T.Text -> IO ()
-printErrInvalidRec line = printErr $ T.concat ["[ERROR] invalid rec: ", line]
+printErrInvalidRec line = printErr $ T.concat ["invalid record: ", line]

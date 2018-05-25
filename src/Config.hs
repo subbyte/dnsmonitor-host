@@ -2,9 +2,10 @@
 
 module Config
 ( monitoredRecType
-, color
 , displayKeySpan
 , colorHit
+, colorCode
+, isErrMsg
 ) where
 
 import Data.Text (Text, concat)
@@ -19,14 +20,10 @@ displayKeySpan = 20
 -- display color when hit more than
 colorHit :: Integer -> Text
 colorHit h
-    | h == 1    = "red"
-    | h < 10    = "default"
-    | otherwise = "grey"
-
-color :: Text -- what color to use
-      -> Text -- the input
-      -> Text -- the output
-color co t = T.concat [colorCode co, t, colorCode "default"]
+    | h == 1    = "yellow"
+    | h < 16    = "default"
+    | h < 128   = "grey"
+    | otherwise = "black"
 
 colorCode :: Text -> Text
 colorCode "black"   = "\x1b[30m"
@@ -39,3 +36,9 @@ colorCode "cyan"    = "\x1b[36m"
 colorCode "white"   = "\x1b[37m"
 colorCode "grey"    = "\x1b[90m"
 colorCode _         = "\x1b[0m"
+
+isErrMsg :: Text -> Bool
+isErrMsg m = and [null $ T.breakOnAll x m | x <- nonTcpdumpErrMsgNeedles]
+
+nonTcpdumpErrMsgNeedles :: [Text]
+nonTcpdumpErrMsgNeedles = ["verbose output suppressed", "listening on"]
