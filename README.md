@@ -20,9 +20,7 @@ Summary: monitor outbound DNS queries on a single host and process it in a strea
 
 [Haskell Stack](https://www.haskellstack.org/)
 
-You need the latest stack to compile.
-
-If you install stack with `apt-get` or `dnf`, you need to do `stack upgrade` and use the latest stack (usually at `~/.local/bin/stack`).
+The latest stack is recommended: if installed with `apt-get` or `dnf`, `stack upgrade` is needed and use the latest stack is usually found at `~/.local/bin/stack`).
 
 ### Installation
 
