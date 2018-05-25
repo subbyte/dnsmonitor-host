@@ -16,7 +16,7 @@ Summary: monitor outbound DNS queries on a single host and process it in a strea
     - Errors from `tcpdump` (the source)
     - Errors in information extraction (invalid records)
 
-### Compiling Environment
+### Compilation Environment
 
 [Haskell Stack](https://www.haskellstack.org/)
 
