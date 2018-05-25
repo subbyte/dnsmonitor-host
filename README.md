@@ -2,7 +2,7 @@
 
 ### Functionality
 
-1. Monitor outbound DNS queries in a stream processing manner
+1. Monitor outbound DNS queries and process it in a streaming manner
 2. Deduplicate records such as the same domain on adjacent `A` and `AAAA` records
 3. Filter out special record types such as `PTR`
 4. Aggregate the information from all previously monitored queries
