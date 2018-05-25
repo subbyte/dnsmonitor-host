@@ -33,3 +33,15 @@ This command compiles it, copies it to `/usr/bin` and sets appropriate permissio
 ```
 dnsmonitor
 ```
+
+### Screenshot
+![screenshot for v1.0](screenshot/1.0.png)
+Color coding is based on TLD/SLD hit count ([Config.hs](src/Config.hs)):
+```Haskell
+colorHit :: Integer -> Text
+colorHit h
+    | h == 1    = "yellow"
+    | h < 16    = "default"
+    | h < 128   = "grey"
+    | otherwise = "black"
+```
