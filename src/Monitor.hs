@@ -42,14 +42,13 @@ monitor = do
         (proc "tcpdump" ["-i", "any", "-l", "-nn", "dst port 53"])
         { std_out = CreatePipe }
     -- streaming DNS data, process it, and print it
-    runStream $ print $ analyzeS $ filterS $ generateS $ S.fromHandle hout
+    runStream $ print $ analyzeTRDs $ rtFilter $ genTRDs $ S.fromHandle hout
   where
-    generateS  = filterJust . S.mapM generateTRD
-    filterS    = S.filter rtFilter
-    rtFilter   = \trd -> notElem (recordtype trd) unmonitoredRecType
-    analyzeS   = filterJust . S.scanx updateHitMap emptyDHM outputLine
-    print      = S.mapM TIO.putStrLn
-    filterJust = fmap fromJust . S.filter isJust
+    genTRDs     = filterJust . S.mapM generateTRD
+    rtFilter    = S.filter $ monitoredRecType . domainname
+    analyzeTRDs = filterJust . S.scanx updateHitMap emptyDHM outputLine
+    print       = S.mapM TIO.putStrLn
+    filterJust  = fmap fromJust . S.filter isJust
 
 generateTRD :: String -> IO (Maybe TRD)
 generateTRD rawline = do

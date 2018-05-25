@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Config
-( unmonitoredRecType
+( monitoredRecType
 , color
 , displayKeySpan
 , colorHit
@@ -10,8 +10,8 @@ module Config
 import Data.Text (Text, concat)
 import qualified Data.Text as T
 
-unmonitoredRecType :: [Text]
-unmonitoredRecType = ["PTR"]
+monitoredRecType :: Text -> Bool
+monitoredRecType rt = notElem rt ["PTR"]
 
 displayKeySpan :: Int
 displayKeySpan = 20
