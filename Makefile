@@ -11,7 +11,7 @@ install:
 	rm -rf $(tmpInsPath)
 	mkdir $(tmpInsPath)
 	stack install --local-bin-path $(tmpInsPath)
-	sudo -- sh -c 'mv $(tmpInsExe) $(targetInsExe); chown root:root $(targetInsExe); chmod 2755 $(targetInsExe)'
+	sudo -- sh -c 'mv $(tmpInsExe) $(targetInsExe); chown root:root $(targetInsExe); chmod 4755 $(targetInsExe)'
 
 clean:
 	stack clean
