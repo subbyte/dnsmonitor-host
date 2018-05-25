@@ -5,7 +5,7 @@
 Summary: monitor outbound DNS traffic on a single host and process it in a streaming manner
 
 1. Monitor outbound DNS queries through `tcpdump`
-2. Deduplicate records such adjacent `A` and `AAAA` records with the same domain name
+2. Deduplicate records such as adjacent `A` and `AAAA` records with the same domain name
 3. Filter out special record types such as `PTR`
 4. Aggregate information from all previously monitored queries
     - How many times the top-level domain (TLD) in the current record is queried
