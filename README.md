@@ -1,11 +1,11 @@
 # DNS Monitor on Single Host
 
-#### Functionality
+### Functionality
 
-1. Monitor outbound DNS queries
-2. Deduplicate records such as the same domain on `A` and `AAAA`
+1. Monitor outbound DNS queries in a stream processing manner
+2. Deduplicate records such as the same domain on adjacent `A` and `AAAA` records
 3. Filter out special record types such as `PTR`
-4. Aggregate the information from the first query
+4. Aggregate the information from all previously monitored queries
     - How many times the top-level domain (TLD) is queried
     - How many times the second-level domain (SLD) is queried
     - Select SLD/TLD as the domain key to print with the full domain
@@ -14,14 +14,18 @@
     - Errors from `tcpdump` (the source)
     - Errors in information extraction (invalid records)
 
-#### Installation
+### Compiling Environment
 
-compile it, copy it to `/usr/bin` and set correct permissions for it to run
+[Haskell Stack](https://www.haskellstack.org/)
+
+You need the latest stack to compile. If you install stack with `apt-get` or
+`dnf`, you need to do `stack upgrade` and use the latest stack (usually at
+`~/.local/bin/stack`).
+
+### Installation
+
 ```
 make install
 ```
-
-if you just need to compile
-```
-make
-```
+This command compiles it, copies it to `/usr/bin` and sets appropriate
+permissions for it to run.
