@@ -36,7 +36,7 @@ dnsmonitor
 
 ### Screenshot
 
-<img src="screenshot/1.0.png" width="714">
+<img src="screenshot/1.0.png" width="800">
 
 Color coding is based on TLD/SLD hit count ([Config.hs](src/Config.hs)):
 ```Haskell
