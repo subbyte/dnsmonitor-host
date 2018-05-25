@@ -2,7 +2,9 @@
 
 ### Functionality
 
-1. Monitor outbound DNS queries and process it in a streaming manner
+Summary: monitor outbound DNS queries on a single host and process it in a streaming manner
+
+1. Monitor outbound DNS queries through `tcpdump`
 2. Deduplicate records such adjacent `A` and `AAAA` records with the same domain name
 3. Filter out special record types such as `PTR`
 4. Aggregate information from all previously monitored queries
@@ -18,7 +20,9 @@
 
 [Haskell Stack](https://www.haskellstack.org/)
 
-You need the latest stack to compile. If you install stack with `apt-get` or `dnf`, you need to do `stack upgrade` and use the latest stack (usually at `~/.local/bin/stack`).
+You need the latest stack to compile.
+
+If you install stack with `apt-get` or `dnf`, you need to do `stack upgrade` and use the latest stack (usually at `~/.local/bin/stack`).
 
 ### Installation
 
@@ -26,3 +30,8 @@ You need the latest stack to compile. If you install stack with `apt-get` or `dn
 make install
 ```
 This command compiles it, copies it to `/usr/bin` and sets appropriate permissions for it to run.
+
+### Usage
+```
+dnsmonitor
+```
