@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Config
-( color
+( unmonitoredRecType
+, color
 , displayKeySpan
 , colorHit
 ) where
@@ -9,12 +10,18 @@ module Config
 import Data.Text (Text, concat)
 import qualified Data.Text as T
 
+unmonitoredRecType :: [Text]
+unmonitoredRecType = ["PTR"]
+
 displayKeySpan :: Int
 displayKeySpan = 20
 
 -- display color when hit more than
 colorHit :: Integer -> Text
-colorHit h = if h > 10 then "red" else "default"
+colorHit h
+    | h == 1    = "red"
+    | h < 10    = "default"
+    | otherwise = "grey"
 
 color :: Text -- what color to use
       -> Text -- the input
@@ -30,4 +37,5 @@ colorCode "blue"    = "\x1b[34m"
 colorCode "magenta" = "\x1b[35m"
 colorCode "cyan"    = "\x1b[36m"
 colorCode "white"   = "\x1b[37m"
+colorCode "grey"    = "\x1b[90m"
 colorCode _         = "\x1b[0m"

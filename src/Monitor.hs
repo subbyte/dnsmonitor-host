@@ -16,7 +16,6 @@ import Control.Monad (guard, when)
 import Data.Maybe (isJust, isNothing, fromJust)
 import System.IO (Handle, stderr)
 import System.Process (createProcess, proc, std_out, StdStream(..))
-import Data.HashMap.Strict ((!))
 
 data TRD = TRD
     { timestamp  :: T.Text  
@@ -24,15 +23,17 @@ data TRD = TRD
     , domainname :: T.Text  
     }
 
-data DomainHitMap = DomainHitMap
-    { tldMap :: HashMap.HashMap T.Text Integer -- top-level domain
-    , sldMap :: HashMap.HashMap T.Text Integer -- second-level domain
+data DomainProcState = DomainProcState
+    { tldMap :: DomainHitMap -- top-level domain
+    , sldMap :: DomainHitMap -- second-level domain
     , currentTLD :: Maybe T.Text -- Just TLD
     , currentSLD :: Maybe T.Text -- Just SLD
     , currentdomain :: T.Text -- entire domain
     }
 
-emptyDHM = DomainHitMap HashMap.empty HashMap.empty Nothing Nothing ""
+type DomainHitMap = HashMap.HashMap T.Text Integer
+
+emptyDHM = DomainProcState HashMap.empty HashMap.empty Nothing Nothing ""
 
 monitor :: IO ()
 monitor = do
@@ -41,11 +42,14 @@ monitor = do
         (proc "tcpdump" ["-i", "any", "-l", "-nn", "dst port 53"])
         { std_out = CreatePipe }
     -- streaming DNS data, process it, and print it
-    runStream $ print $ analyzeTRDs $ generateTRDs $ S.fromHandle hout
+    runStream $ print $ analyzeS $ filterS $ generateS $ S.fromHandle hout
   where
-    analyzeTRDs  = fmap fromJust . S.scanx updateHitMap emptyDHM outputLine
-    generateTRDs = fmap fromJust . S.filter isJust . S.mapM generateTRD
-    print        = S.mapM . TIO.putStrLn
+    generateS  = filterJust . S.mapM generateTRD
+    filterS    = S.filter rtFilter
+    rtFilter   = \trd -> notElem (recordtype trd) unmonitoredRecType
+    analyzeS   = filterJust . S.scanx updateHitMap emptyDHM outputLine
+    print      = S.mapM TIO.putStrLn
+    filterJust = fmap fromJust . S.filter isJust
 
 generateTRD :: String -> IO (Maybe TRD)
 generateTRD rawline = do
@@ -76,23 +80,31 @@ splitOnSpace = T.split (== ' ')
 splitOnDot :: T.Text -> [T.Text]
 splitOnDot = T.split (== '.')
 
-updateHitMap :: DomainHitMap -> TRD -> DomainHitMap
-updateHitMap m trd = DomainHitMap tldM sldM tld sld dm
+updateHitMap :: DomainProcState -> TRD -> DomainProcState
+updateHitMap m trd = DomainProcState tldM sldM tld sld dm
   where
-    dm  = domainname trd
-    dmItems = splitOnDot dm
-    tld = Just . last $ init dmItems
-    sld = if length dmItems > 2 then Just . last . init $ init dmItems else Nothing
-    tldM = HashMap.insertWith (+) tld 1 $ tldMap m
-    sldM = HashMap.insertWith (+) sld 1 $ sldMap m
+    dm   = domainname trd
+    dx   = splitOnDot dm
+    tld  = Just . last $ init dx
+    sld  = if length dx > 2 then Just . last . init $ init dx else Nothing
+    tldM = incrementMap (tldMap m) tld
+    sldM = incrementMap (sldMap m) sld
 
-outputLine :: DomainHitMap -> Maybe T.Text
+incrementMap :: DomainHitMap
+             -> Maybe T.Text -- domain key if extracted
+             -> DomainHitMap
+incrementMap m Nothing  = m
+incrementMap m (Just k) = HashMap.insertWith (+) k 1 m
+
+outputLine :: DomainProcState -> Maybe T.Text
 -- found SLD
-outputLine (DomainHitMap _    sldM _          (Just sld) dm) = prepareOutputLine tld (sldM ! sld) dm
+outputLine (DomainProcState _    sldM _          (Just sld) dm) = Just $
+    prepareOutputLine sld (sldM HashMap.! sld) dm
 -- at least found TLD
-outputLine (DomainHitMap tldM _    (Just tld) Nothing    dm) = prepareOutputLine tld (tldM ! tld) dm
--- no TLD (domainname == "."), the upstream processor should already yield an error
-outputLine (DomainHitMap tldM _    Nothing    Nothing    dm) = Nothing
+outputLine (DomainProcState tldM _    (Just tld) Nothing    dm) = Just $
+    prepareOutputLine tld (tldM HashMap.! tld) dm
+-- no TLD (domainname == "."), the upstream should already yield an error
+outputLine (DomainProcState tldM _    Nothing    Nothing    dm) = Nothing
 
 prepareOutputLine :: T.Text -- domain key: TLD or SLD
                   -> Integer -- hit
@@ -102,12 +114,11 @@ prepareOutputLine dk hit dm = T.concat [color co $ padding dk, "| ", dm]
   where
     co = colorHit hit
     pos = T.length dk - displayKeySpan
-    padding x = T.justifyLeft displayTLDSpan ' '
+    padding x = T.justifyLeft displayKeySpan ' '
               $ if pos > 0 then T.concat [T.dropEnd (pos + 4) x, "..."] else x
 
 printErr :: T.Text -> IO ()
 printErr = TIO.hPutStrLn stderr
 
 printErrInvalidRec :: T.Text -> IO ()
-printErrInvalidRec line = printErr $
-    T.concat ["[ERROR] invalid record: ", line]
+printErrInvalidRec line = printErr $ T.concat ["[ERROR] invalid rec: ", line]
