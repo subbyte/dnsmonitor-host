@@ -2,7 +2,7 @@
 
 ### Functionality
 
-Summary: monitor outbound DNS queries on a single host and process it in a streaming manner
+Summary: monitor outbound DNS traffic on a single host and process it in a streaming manner
 
 1. Monitor outbound DNS queries through `tcpdump`
 2. Deduplicate records such adjacent `A` and `AAAA` records with the same domain name
