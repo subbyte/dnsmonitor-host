@@ -23,7 +23,7 @@ Summary: monitor outbound DNS traffic on a single host and process it in a strea
 The latest stack is recommended: if installed with `apt-get` or `dnf`, then stack can be upgraded with `stack upgrade`. The latest stack is usually at `~/.local/bin/stack`.
 
 ### Installation
-
+The application requires `tcpdump` installed on the host.
 ```
 make install
 ```
